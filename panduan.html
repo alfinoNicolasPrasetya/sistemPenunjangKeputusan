@@ -1,0 +1,1963 @@
+<!-- @format -->
+
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cara Kerja Fuzzy Sugeno</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --ink: #0f0f14;
+        --paper: #fafaf7;
+        --cream: #f0ede4;
+        --muted: #7a7a8a;
+        --border: #e0dbd0;
+        --accent: #e84b2a;
+        --gold: #c9a14a;
+        --teal: #1e8c7a;
+        --violet: #5b4ee8;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family: "DM Sans", sans-serif;
+        background: var(--paper);
+        color: var(--ink);
+        line-height: 1.6;
+        overflow-x: hidden;
+      }
+
+      /* HERO */
+      .hero {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 80px 48px;
+        position: relative;
+        overflow: hidden;
+        background: var(--ink);
+      }
+      .hero-bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            ellipse 60% 50% at 80% 20%,
+            rgba(232, 75, 42, 0.1) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse 40% 60% at 10% 80%,
+            rgba(91, 78, 232, 0.1) 0%,
+            transparent 60%
+          );
+        pointer-events: none;
+      }
+      .hero-grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 48px 48px;
+        pointer-events: none;
+      }
+      .hero-inner {
+        position: relative;
+        max-width: 1100px;
+        margin: 0 auto;
+        width: 100%;
+      }
+      .hero-tag {
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .hero-tag::before {
+        content: "";
+        display: inline-block;
+        width: 32px;
+        height: 1px;
+        background: var(--accent);
+      }
+      .hero h1 {
+        font-family: "Syne", sans-serif;
+        font-size: clamp(44px, 7vw, 90px);
+        font-weight: 800;
+        color: #fff;
+        line-height: 0.95;
+        margin-bottom: 28px;
+      }
+      .hero h1 em {
+        font-style: normal;
+        color: var(--accent);
+      }
+      .hero-sub {
+        font-size: 17px;
+        color: rgba(255, 255, 255, 0.5);
+        max-width: 500px;
+        line-height: 1.8;
+        margin-bottom: 48px;
+      }
+      .hero-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .hero-nav a {
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-family: "DM Mono", monospace;
+        font-size: 12px;
+        font-weight: 500;
+        text-decoration: none;
+        border: 1px solid;
+        transition:
+          opacity 0.2s,
+          transform 0.2s;
+      }
+      .hero-nav a:hover {
+        opacity: 0.8;
+        transform: translateY(-2px);
+      }
+      .hero-nav a:nth-child(1) {
+        background: rgba(232, 75, 42, 0.12);
+        color: #e84b2a;
+        border-color: rgba(232, 75, 42, 0.35);
+      }
+      .hero-nav a:nth-child(2) {
+        background: rgba(201, 161, 74, 0.12);
+        color: #c9a14a;
+        border-color: rgba(201, 161, 74, 0.35);
+      }
+      .hero-nav a:nth-child(3) {
+        background: rgba(30, 140, 122, 0.12);
+        color: #1e8c7a;
+        border-color: rgba(30, 140, 122, 0.35);
+      }
+      .hero-nav a:nth-child(4) {
+        background: rgba(91, 78, 232, 0.12);
+        color: #5b4ee8;
+        border-color: rgba(91, 78, 232, 0.35);
+      }
+      .scroll-hint {
+        position: absolute;
+        bottom: 36px;
+        left: 48px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: rgba(255, 255, 255, 0.25);
+        font-size: 11px;
+        font-family: "DM Mono", monospace;
+        letter-spacing: 0.1em;
+        animation: bob 2.5s ease-in-out infinite;
+      }
+      @keyframes bob {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(7px);
+        }
+      }
+
+      /* LAYOUT */
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 88px 48px;
+      }
+      .divider {
+        height: 1px;
+        background: var(--border);
+        margin: 0 48px;
+      }
+
+      /* REVEAL ANIMATION */
+      .reveal {
+        opacity: 0;
+        transform: translateY(22px);
+        transition:
+          opacity 0.6s ease,
+          transform 0.6s ease;
+      }
+      .reveal.on {
+        opacity: 1;
+        transform: none;
+      }
+
+      /* SECTION LABEL */
+      .slabel {
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .slabel::after {
+        content: "";
+        flex: 0 0 40px;
+        height: 1px;
+        background: currentColor;
+        opacity: 0.35;
+      }
+
+      /* STEP BADGE */
+      .sbadge {
+        display: inline-flex;
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        border: 1px solid;
+        margin-bottom: 14px;
+      }
+      .s1 .sbadge {
+        background: rgba(232, 75, 42, 0.1);
+        color: #e84b2a;
+        border-color: rgba(232, 75, 42, 0.3);
+      }
+      .s2 .sbadge {
+        background: rgba(201, 161, 74, 0.1);
+        color: #c9a14a;
+        border-color: rgba(201, 161, 74, 0.3);
+      }
+      .s3 .sbadge {
+        background: rgba(30, 140, 122, 0.1);
+        color: #1e8c7a;
+        border-color: rgba(30, 140, 122, 0.3);
+      }
+      .s4 .sbadge {
+        background: rgba(91, 78, 232, 0.1);
+        color: #5b4ee8;
+        border-color: rgba(91, 78, 232, 0.3);
+      }
+
+      .step-title {
+        font-family: "Syne", sans-serif;
+        font-size: clamp(26px, 4vw, 42px);
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 18px;
+      }
+      .step-intro {
+        font-size: 16px;
+        color: #555;
+        line-height: 1.85;
+        max-width: 660px;
+        margin-bottom: 28px;
+      }
+
+      /* ANALOGY CARD */
+      .acard {
+        display: grid;
+        grid-template-columns: 72px 1fr;
+        gap: 20px;
+        align-items: start;
+        background: var(--cream);
+        border: 1.5px solid var(--border);
+        border-radius: 18px;
+        padding: 30px;
+        margin: 24px 0;
+        position: relative;
+        overflow: hidden;
+      }
+      .acard::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+      }
+      .s1 .acard::before {
+        background: #e84b2a;
+      }
+      .s2 .acard::before {
+        background: #c9a14a;
+      }
+      .s3 .acard::before {
+        background: #1e8c7a;
+      }
+      .s4 .acard::before {
+        background: #5b4ee8;
+      }
+      .acard-ic {
+        width: 72px;
+        height: 72px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        flex-shrink: 0;
+      }
+      .s1 .acard-ic {
+        background: rgba(232, 75, 42, 0.1);
+      }
+      .s2 .acard-ic {
+        background: rgba(201, 161, 74, 0.1);
+      }
+      .s3 .acard-ic {
+        background: rgba(30, 140, 122, 0.1);
+      }
+      .s4 .acard-ic {
+        background: rgba(91, 78, 232, 0.1);
+      }
+      .acard h3 {
+        font-family: "Syne", sans-serif;
+        font-size: 17px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .acard p {
+        font-size: 14.5px;
+        color: #444;
+        line-height: 1.8;
+      }
+      .acard p strong {
+        color: var(--ink);
+      }
+
+      /* DARK DEMO BOX */
+      .dbox {
+        background: var(--ink);
+        border-radius: 14px;
+        padding: 26px;
+        color: #fff;
+        margin: 18px 0;
+      }
+      .dbox-lbl {
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.35);
+        margin-bottom: 16px;
+      }
+      .dbox-tip {
+        margin-top: 16px;
+        padding: 11px 15px;
+        border-radius: 8px;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.65);
+        border: 1px solid;
+      }
+      .dbox-tip.c1 {
+        background: rgba(232, 75, 42, 0.15);
+        border-color: rgba(232, 75, 42, 0.35);
+      }
+      .dbox-tip.c2 {
+        background: rgba(201, 161, 74, 0.15);
+        border-color: rgba(201, 161, 74, 0.35);
+      }
+      .dbox-tip.c3 {
+        background: rgba(30, 140, 122, 0.15);
+        border-color: rgba(30, 140, 122, 0.35);
+      }
+      .dbox-tip.c4 {
+        background: rgba(91, 78, 232, 0.15);
+        border-color: rgba(91, 78, 232, 0.35);
+      }
+
+      /* INPUT CARDS */
+      .input-cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 4px;
+      }
+      .icard {
+        flex: 1;
+        min-width: 120px;
+        padding: 18px 20px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+      }
+      .icard-lbl {
+        font-size: 10.5px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.4);
+        margin-bottom: 8px;
+      }
+      .icard-val {
+        font-family: "Syne", sans-serif;
+        font-size: 30px;
+        font-weight: 900;
+        color: #fff;
+        line-height: 1;
+      }
+      .icard-unit {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.4);
+        margin-top: 4px;
+      }
+
+      /* MU BARS */
+      .mu-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 13px;
+      }
+      .mu-row {
+        display: grid;
+        grid-template-columns: 90px 1fr 58px;
+        gap: 12px;
+        align-items: center;
+      }
+      .mu-label {
+        font-family: "DM Mono", monospace;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.6);
+      }
+      .mu-track {
+        height: 7px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .mu-fill {
+        height: 100%;
+        border-radius: 4px;
+      }
+      .mu-val {
+        font-family: "DM Mono", monospace;
+        font-size: 12px;
+        font-weight: 500;
+        text-align: right;
+      }
+
+      /* RULE CARDS */
+      .rules-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 12px;
+        margin: 18px 0;
+      }
+      .rcard {
+        padding: 16px 18px;
+        border-radius: 12px;
+        border: 1.5px solid;
+      }
+      .rcard.act {
+        background: #f0fdf4;
+        border-color: #86efac;
+      }
+      .rcard.semi {
+        background: #f5f3ff;
+        border-color: #c4b5fd;
+      }
+      .rcard.off {
+        background: #f9fafb;
+        border-color: #e5e7eb;
+        opacity: 0.55;
+      }
+      .rcard-if {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .rcard.act .rcard-if {
+        color: #15803d;
+      }
+      .rcard.semi .rcard-if {
+        color: #6d28d9;
+      }
+      .rcard.off .rcard-if {
+        color: #9ca3af;
+      }
+      .rcard-txt {
+        font-family: "DM Mono", monospace;
+        font-size: 12.5px;
+        color: #111;
+        line-height: 1.7;
+      }
+      .rcard-alpha {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .rcard-alpha-lbl {
+        font-size: 11px;
+        color: #9ca3af;
+      }
+      .rcard-alpha-val {
+        font-family: "DM Mono", monospace;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .rcard.act .rcard-alpha-val {
+        color: #15803d;
+      }
+      .rcard.semi .rcard-alpha-val {
+        color: #6d28d9;
+      }
+      .rcard.off .rcard-alpha-val {
+        color: #9ca3af;
+      }
+
+      /* CODE BLOCK */
+      .codebl {
+        font-family: "DM Mono", monospace;
+        font-size: 13.5px;
+        line-height: 2.2;
+        color: rgba(255, 255, 255, 0.75);
+      }
+      .codebl .cm {
+        color: rgba(255, 255, 255, 0.3);
+      }
+      .codebl .cv {
+        color: #86efac;
+      }
+      .codebl .ch {
+        color: #fde68a;
+        font-size: 17px;
+        font-weight: 700;
+      }
+
+      /* FORMULA */
+      .fbox {
+        background: linear-gradient(135deg, #0f0f14 0%, #1a1a2e 100%);
+        border-radius: 20px;
+        padding: 44px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        margin: 24px 0;
+      }
+      .fbox::after {
+        content: "";
+        position: absolute;
+        top: -50px;
+        right: -50px;
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(91, 78, 232, 0.15),
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+      .fbox-lbl {
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.3);
+        margin-bottom: 20px;
+      }
+      .fbox-expr {
+        font-family: "DM Mono", monospace;
+        font-size: clamp(18px, 3vw, 28px);
+        color: #fff;
+        line-height: 2.4;
+        margin-bottom: 20px;
+      }
+      .fbox-frac {
+        display: inline-block;
+        border-top: 2.5px solid var(--violet);
+        padding: 0 12px;
+        color: var(--violet);
+      }
+      .fbox-sub {
+        font-family: "DM Mono", monospace;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.4);
+        line-height: 2.8;
+      }
+      .fbox-res {
+        font-family: "Syne", sans-serif;
+        font-size: 44px;
+        font-weight: 900;
+        color: #fff;
+        margin-top: 8px;
+      }
+      .fbox-badge {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 6px 20px;
+        border-radius: 20px;
+        font-family: "Syne", sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        color: #fff;
+      }
+
+      /* KAT CHIPS */
+      .kat-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 24px 0;
+      }
+      .kc {
+        flex: 1;
+        min-width: 140px;
+        padding: 18px 16px 22px;
+        border-radius: 14px;
+        border: 1.5px solid;
+        position: relative;
+        overflow: hidden;
+      }
+      .kc::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+      }
+      .kc1 {
+        background: #fef2f2;
+        border-color: #fecaca;
+      }
+      .kc1::after {
+        background: #ef4444;
+      }
+      .kc2 {
+        background: #fffbeb;
+        border-color: #fde68a;
+      }
+      .kc2::after {
+        background: #f59e0b;
+      }
+      .kc3 {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+      }
+      .kc3::after {
+        background: #10b981;
+      }
+      .kc4 {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+      }
+      .kc4::after {
+        background: #3b82f6;
+      }
+      .kc h4 {
+        font-family: "Syne", sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .kc .rng {
+        font-family: "DM Mono", monospace;
+        font-size: 12px;
+        opacity: 0.75;
+        margin-bottom: 10px;
+      }
+      .kc .dsc {
+        font-size: 12.5px;
+        line-height: 1.6;
+        opacity: 0.82;
+      }
+      .kc1 h4,
+      .kc1 .rng,
+      .kc1 .dsc {
+        color: #991b1b;
+      }
+      .kc2 h4,
+      .kc2 .rng,
+      .kc2 .dsc {
+        color: #78350f;
+      }
+      .kc3 h4,
+      .kc3 .rng,
+      .kc3 .dsc {
+        color: #14532d;
+      }
+      .kc4 h4,
+      .kc4 .rng,
+      .kc4 .dsc {
+        color: #1e3a8a;
+      }
+
+      /* INTERACTIVE */
+      .interactive {
+        background: var(--cream);
+        border: 1.5px solid var(--border);
+        border-radius: 20px;
+        padding: 34px;
+        margin: 24px 0;
+      }
+      .interactive h3 {
+        font-family: "Syne", sans-serif;
+        font-size: 20px;
+        font-weight: 800;
+        margin-bottom: 4px;
+      }
+      .interactive .isub {
+        font-size: 13.5px;
+        color: var(--muted);
+        margin-bottom: 22px;
+      }
+      .sg {
+        display: grid;
+        grid-template-columns: 150px 1fr 72px;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .sg-lbl {
+        font-size: 13.5px;
+        font-weight: 600;
+      }
+      .sg-val {
+        font-family: "DM Mono", monospace;
+        font-size: 14px;
+        font-weight: 500;
+        text-align: right;
+      }
+
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        outline: none;
+        cursor: pointer;
+        background: #d4d0c8;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--ink);
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 2px var(--ink);
+        cursor: pointer;
+      }
+      input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--ink);
+        border: 3px solid #fff;
+        cursor: pointer;
+      }
+      .live-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 20px;
+      }
+      .live-panel {
+        background: var(--ink);
+        border-radius: 12px;
+        padding: 18px;
+      }
+      .live-panel-lbl {
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.35);
+        margin-bottom: 14px;
+      }
+      .res-box {
+        margin-top: 18px;
+        background: #fff;
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+        padding: 20px 24px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .res-score {
+        font-family: "Syne", sans-serif;
+        font-size: 50px;
+        font-weight: 900;
+        line-height: 1;
+        min-width: 96px;
+        transition: color 0.3s;
+      }
+      .res-info {
+        flex: 1;
+      }
+      .res-kat {
+        font-family: "Syne", sans-serif;
+        font-size: 20px;
+        font-weight: 800;
+        margin-bottom: 2px;
+        transition: color 0.3s;
+      }
+      .res-fml {
+        font-size: 12.5px;
+        color: var(--muted);
+        margin-bottom: 8px;
+        font-family: "DM Mono", monospace;
+      }
+      .bar-track {
+        height: 8px;
+        background: #e9e7e0;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition:
+          width 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+          background 0.3s;
+      }
+
+      /* SUMMARY */
+      .summary {
+        background: var(--ink);
+        color: #fff;
+        padding: 88px 48px;
+      }
+      .summary-inner {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .flow-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 3px;
+        border-radius: 14px;
+        overflow: hidden;
+        margin: 40px 0;
+      }
+      .fc {
+        padding: 28px 22px;
+        display: flex;
+        flex-direction: column;
+      }
+      .fc:nth-child(1) {
+        background: #e84b2a;
+      }
+      .fc:nth-child(2) {
+        background: #c9a14a;
+      }
+      .fc:nth-child(3) {
+        background: #1e8c7a;
+      }
+      .fc:nth-child(4) {
+        background: #5b4ee8;
+      }
+      .fc-num {
+        font-family: "DM Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        opacity: 0.65;
+        margin-bottom: 10px;
+      }
+      .fc-name {
+        font-family: "Syne", sans-serif;
+        font-size: 18px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 8px;
+        line-height: 1.1;
+      }
+      .fc-desc {
+        font-size: 12.5px;
+        color: rgba(255, 255, 255, 0.7);
+        line-height: 1.65;
+        margin-top: auto;
+        padding-top: 10px;
+      }
+      .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff;
+        color: var(--ink);
+        font-family: "Syne", sans-serif;
+        font-weight: 700;
+        font-size: 14px;
+        padding: 13px 26px;
+        border-radius: 10px;
+        text-decoration: none;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+      .back-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+      }
+
+      /* TOOLTIP */
+      .tip {
+        display: inline-block;
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        background: var(--muted);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        text-align: center;
+        line-height: 17px;
+        cursor: help;
+        vertical-align: middle;
+        margin-left: 5px;
+        position: relative;
+      }
+      .tip::after {
+        content: attr(data-tip);
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--ink);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 400;
+        font-family: "DM Sans", sans-serif;
+        padding: 7px 12px;
+        border-radius: 7px;
+        white-space: nowrap;
+        z-index: 99;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s;
+      }
+      .tip:hover::after {
+        opacity: 1;
+      }
+
+      /* RESPONSIVE */
+      @media (max-width: 760px) {
+        .hero,
+        .wrap {
+          padding: 60px 24px;
+        }
+        .divider {
+          margin: 0 24px;
+        }
+        .summary {
+          padding: 60px 24px;
+        }
+        .acard {
+          grid-template-columns: 1fr;
+        }
+        .flow-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .sg {
+          grid-template-columns: 110px 1fr 58px;
+        }
+        .live-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ═══════════════════════ HERO ═══════════════════════ -->
+    <section class="hero">
+      <div class="hero-bg"></div>
+      <div class="hero-grid"></div>
+      <div class="hero-inner">
+        <div class="hero-tag">Panduan Mudah · SPK Fuzzy Sugeno</div>
+        <h1>Gimana Sih<br />Cara Kerja<br /><em>Fuzzy Sugeno?</em></h1>
+        <p class="hero-sub">
+          Bayangkan harus menilai seseorang dari banyak kriteria sekaligus — dan
+          hasilnya harus adil, konsisten, dan matematis. Itulah yang dilakukan
+          sistem ini.
+        </p>
+        <div class="hero-nav">
+          <a href="#step1">01 · Input</a>
+          <a href="#step2">02 · Fuzzifikasi</a>
+          <a href="#step3">03 · Inferensi</a>
+          <a href="#step4">04 · Defuzzifikasi</a>
+        </div>
+      </div>
+      <div class="scroll-hint">
+        <svg
+          width="14"
+          height="14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+        Scroll untuk baca
+      </div>
+    </section>
+
+    <!-- ═══════════════════════ INTRO ═══════════════════════ -->
+    <section class="wrap reveal">
+      <div class="slabel">Kenapa pakai Fuzzy?</div>
+      <h2
+        style="
+          font-family: &quot;Syne&quot;, sans-serif;
+          font-size: clamp(26px, 4vw, 42px);
+          font-weight: 800;
+          line-height: 1.15;
+          margin-bottom: 20px;
+        "
+      >
+        Dunia nyata tidak hitam-putih.<br />Fuzzy memahami abu-abu.
+      </h2>
+      <p
+        style="
+          font-size: 16px;
+          color: #555;
+          max-width: 640px;
+          line-height: 1.85;
+          margin-bottom: 14px;
+        "
+      >
+        Sistem biasa cuma tahu <strong>"ya"</strong> atau
+        <strong>"tidak"</strong>. Sistem Fuzzy bisa bilang
+        <strong>"60% iya, 40% tidak"</strong> — jauh lebih mirip cara manusia
+        berpikir.
+      </p>
+      <p
+        style="
+          font-size: 16px;
+          color: #555;
+          max-width: 640px;
+          line-height: 1.85;
+        "
+      >
+        Contoh: siswa setinggi 165 cm — apakah "sedang" atau "tinggi"?
+        Jawabannya: <em>bisa keduanya sekaligus</em>, tergantung derajat
+        keanggotaannya di masing-masing kategori.
+      </p>
+      <div class="acard s2" style="margin-top: 36px">
+        <div class="acard-ic">🌡️</div>
+        <div>
+          <h3>Analogi: Termostat Pintar</h3>
+          <p>
+            Termostat biasa: suhu &gt; 30°C → AC nyala. Titik. Kalau 29.9°C, AC
+            mati total.<br /><br />
+            Termostat Fuzzy: 29°C → AC nyala <strong>20%</strong>. 32°C → AC
+            nyala <strong>80%</strong>.
+            <strong>Lebih manusiawi, lebih efisien.</strong>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ═══════════════════════ STEP 1 ═══════════════════════ -->
+    <section class="wrap s1 reveal" id="step1">
+      <div class="sbadge">Langkah 1</div>
+      <h2 class="step-title">Nilai Input —<br />Data Mentah Dulu</h2>
+      <p class="step-intro">
+        Sebelum sistem bisa menilai, ia butuh <strong>data mentah</strong> dari
+        setiap siswa. Data dimasukkan manual oleh admin — seperti tinggi badan,
+        berat badan, atau kriteria lain yang sudah ditentukan.
+      </p>
+      <div class="acard">
+        <div class="acard-ic">📋</div>
+        <div>
+          <h3>Ibarat: Formulir di Klinik</h3>
+          <p>
+            Seperti mengisi formulir: tinggi badan <strong>175 cm</strong>,
+            berat badan <strong>68 kg</strong>. Data ini masih mentah — belum
+            ada penilaian apapun, cuma fakta. Sistem akan mengolahnya di langkah
+            berikutnya.
+          </p>
+        </div>
+      </div>
+      <div class="dbox">
+        <div class="dbox-lbl">Contoh data input siswa — Budi, Kelas XI</div>
+        <div class="input-cards">
+          <div class="icard">
+            <div class="icard-lbl">Tinggi Badan</div>
+            <div class="icard-val">175</div>
+            <div class="icard-unit">cm</div>
+          </div>
+          <div class="icard">
+            <div class="icard-lbl">Berat Badan</div>
+            <div class="icard-val">68</div>
+            <div class="icard-unit">kg</div>
+          </div>
+        </div>
+        <div class="dbox-tip c1">
+          💡 Data ini belum berarti apa-apa sampai kita tahu: 175 cm itu masuk
+          "Rendah", "Sedang", atau "Tinggi"? Langkah berikutnya yang
+          menjawabnya.
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ═══════════════════════ STEP 2 ═══════════════════════ -->
+    <section class="wrap s2 reveal" id="step2">
+      <div class="sbadge">Langkah 2</div>
+      <h2 class="step-title">Fuzzifikasi —<br />Angka Jadi Derajat</h2>
+      <p class="step-intro">
+        Angka mentah tadi diubah jadi <strong>derajat keanggotaan (µ)</strong> —
+        nilainya antara 0 sampai 1. Ini menjawab:
+        <em>"seberapa besar siswa ini masuk ke himpunan tertentu?"</em>
+      </p>
+      <div class="acard">
+        <div class="acard-ic">🌶️</div>
+        <div>
+          <h3>Ibarat: Skala Kepedasan Sambal</h3>
+          <p>
+            Bukan cuma "pedas" atau "tidak pedas" — ada skalanya:<br />
+            <strong>Sedikit pedas (µ = 0.2)</strong>,
+            <strong>cukup pedas (µ = 0.6)</strong>,
+            <strong>sangat pedas (µ = 1.0)</strong>.<br /><br />
+            Begitu juga tinggi 165 cm: bisa masuk "Sedang" µ =
+            <strong>0.8</strong> sekaligus "Tinggi" µ = <strong>0.2</strong> —
+            <strong>pada waktu yang sama</strong>.
+          </p>
+        </div>
+      </div>
+      <div class="dbox">
+        <div class="dbox-lbl">Hasil fuzzifikasi — Tinggi Badan: 175 cm</div>
+        <div class="mu-bars">
+          <div class="mu-row">
+            <div class="mu-label">Rendah</div>
+            <div class="mu-track">
+              <div
+                class="mu-fill"
+                id="s2r1"
+                style="
+                  width: 0%;
+                  background: #ef4444;
+                  transition: width 0.8s ease;
+                "
+              ></div>
+            </div>
+            <div class="mu-val" style="color: #ef4444" id="s2v1">0.0000</div>
+          </div>
+          <div class="mu-row">
+            <div class="mu-label">Sedang</div>
+            <div class="mu-track">
+              <div
+                class="mu-fill"
+                id="s2r2"
+                style="
+                  width: 0%;
+                  background: #f59e0b;
+                  transition: width 0.8s 0.1s ease;
+                "
+              ></div>
+            </div>
+            <div class="mu-val" style="color: #f59e0b" id="s2v2">0.0000</div>
+          </div>
+          <div class="mu-row">
+            <div class="mu-label">Tinggi</div>
+            <div class="mu-track">
+              <div
+                class="mu-fill"
+                id="s2r3"
+                style="
+                  width: 0%;
+                  background: #10b981;
+                  transition: width 0.8s 0.2s ease;
+                "
+              ></div>
+            </div>
+            <div class="mu-val" style="color: #10b981" id="s2v3">0.0000</div>
+          </div>
+        </div>
+        <div
+          style="
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+          "
+        >
+          <div class="dbox-lbl" style="margin-bottom: 14px">
+            Berat Badan: 68 kg
+          </div>
+          <div class="mu-bars">
+            <div class="mu-row">
+              <div class="mu-label">Kurus</div>
+              <div class="mu-track">
+                <div
+                  class="mu-fill"
+                  id="s2r4"
+                  style="
+                    width: 0%;
+                    background: #ef4444;
+                    transition: width 0.8s 0.1s ease;
+                  "
+                ></div>
+              </div>
+              <div class="mu-val" style="color: #ef4444" id="s2v4">0.0000</div>
+            </div>
+            <div class="mu-row">
+              <div class="mu-label">Normal</div>
+              <div class="mu-track">
+                <div
+                  class="mu-fill"
+                  id="s2r5"
+                  style="
+                    width: 0%;
+                    background: #10b981;
+                    transition: width 0.8s 0.2s ease;
+                  "
+                ></div>
+              </div>
+              <div class="mu-val" style="color: #10b981" id="s2v5">0.0000</div>
+            </div>
+            <div class="mu-row">
+              <div class="mu-label">Gemuk</div>
+              <div class="mu-track">
+                <div
+                  class="mu-fill"
+                  id="s2r6"
+                  style="
+                    width: 0%;
+                    background: #f59e0b;
+                    transition: width 0.8s 0.3s ease;
+                  "
+                ></div>
+              </div>
+              <div class="mu-val" style="color: #f59e0b" id="s2v6">0.0000</div>
+            </div>
+          </div>
+        </div>
+        <div class="dbox-tip c2" style="margin-top: 16px">
+          💡 µ = 1.0 berarti "100% masuk" himpunan itu. µ = 0 berarti "tidak
+          masuk sama sekali". Nilai di tengah berarti masuk sebagian.
+        </div>
+      </div>
+      <div
+        style="
+          background: var(--cream);
+          border: 1.5px solid var(--border);
+          border-radius: 14px;
+          padding: 22px;
+          margin-top: 18px;
+        "
+      >
+        <p
+          style="
+            font-family: &quot;Syne&quot;, sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 12px;
+          "
+        >
+          2 tipe fungsi keanggotaan yang digunakan:
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+          <div
+            style="
+              padding: 16px;
+              background: #eff6ff;
+              border-radius: 10px;
+              border: 1px solid #bfdbfe;
+            "
+          >
+            <div
+              style="
+                font-family: &quot;DM Mono&quot;, monospace;
+                font-size: 12px;
+                font-weight: 700;
+                color: #1d4ed8;
+                margin-bottom: 6px;
+              "
+            >
+              TRIMF — Segitiga
+            </div>
+            <div style="font-size: 13px; color: #1e3a8a; line-height: 1.65">
+              3 titik: <strong>a, b, c</strong>. Naik dari a ke b, turun dari b
+              ke c. Cocok untuk himpunan "di tengah".
+            </div>
+          </div>
+          <div
+            style="
+              padding: 16px;
+              background: #f0fdf4;
+              border-radius: 10px;
+              border: 1px solid #bbf7d0;
+            "
+          >
+            <div
+              style="
+                font-family: &quot;DM Mono&quot;, monospace;
+                font-size: 12px;
+                font-weight: 700;
+                color: #15803d;
+                margin-bottom: 6px;
+              "
+            >
+              TRAPMF — Trapesium
+            </div>
+            <div style="font-size: 13px; color: #14532d; line-height: 1.65">
+              4 titik: <strong>a, b, c, d</strong>. Ada area "datar" di tengah =
+              µ 1 penuh. Cocok untuk himpunan di ujung rentang.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ═══════════════════════ STEP 3 ═══════════════════════ -->
+    <section class="wrap s3 reveal" id="step3">
+      <div class="sbadge">Langkah 3</div>
+      <h2 class="step-title">Inferensi —<br />Cocokkan ke Aturan</h2>
+      <p class="step-intro">
+        Setelah punya nilai µ, sistem mengevaluasi setiap
+        <strong>aturan IF-THEN</strong> yang dibuat admin. Setiap aturan
+        dihitung <strong>kekuatan aktivasinya (α)</strong> — seberapa kuat
+        aturan itu berlaku untuk siswa ini.
+      </p>
+      <div class="acard">
+        <div class="acard-ic">📜</div>
+        <div>
+          <h3>Ibarat: Aturan Penerimaan Beasiswa</h3>
+          <p>
+            "<strong>JIKA</strong> tinggi badan Tinggi
+            <strong>DAN</strong> berat badan Normal, <strong>MAKA</strong> nilai
+            = 90 (Sangat Layak)."<br /><br />
+            Sistem punya banyak aturan seperti ini. Setiap aturan dicek:
+            <strong>seberapa kuat aturan ini berlaku</strong> untuk data siswa
+            yang sedang dihitung? Itulah nilai α.
+          </p>
+        </div>
+      </div>
+      <p
+        style="
+          font-size: 12.5px;
+          font-weight: 700;
+          color: var(--muted);
+          margin-bottom: 12px;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        "
+      >
+        Evaluasi aturan — Tinggi=Tinggi (µ=1.0), Berat=Normal (µ=0.65)
+      </p>
+      <div class="rules-grid">
+        <div class="rcard off">
+          <div class="rcard-if">Aturan 1 — Tidak aktif</div>
+          <div class="rcard-txt">
+            IF Tinggi = <strong>Rendah</strong><br />AND Berat =
+            <strong>Kurus</strong><br />THEN z = 20
+          </div>
+          <div class="rcard-alpha">
+            <span class="rcard-alpha-lbl">α =</span
+            ><span class="rcard-alpha-val">0.0000</span>
+          </div>
+        </div>
+        <div class="rcard off">
+          <div class="rcard-if">Aturan 5 — Tidak aktif</div>
+          <div class="rcard-txt">
+            IF Tinggi = <strong>Sedang</strong><br />AND Berat =
+            <strong>Normal</strong><br />THEN z = 75
+          </div>
+          <div class="rcard-alpha">
+            <span class="rcard-alpha-lbl">α =</span
+            ><span class="rcard-alpha-val">0.0000</span>
+          </div>
+        </div>
+        <div class="rcard semi">
+          <div class="rcard-if">Aturan 9 — Sedikit aktif</div>
+          <div class="rcard-txt">
+            IF Tinggi = <strong>Tinggi</strong><br />AND Berat =
+            <strong>Gemuk</strong><br />THEN z = 55
+          </div>
+          <div class="rcard-alpha">
+            <span class="rcard-alpha-lbl">α =</span
+            ><span class="rcard-alpha-val">0.3500</span>
+          </div>
+        </div>
+        <div class="rcard act">
+          <div class="rcard-if">Aturan 8 ✓ Aktif!</div>
+          <div class="rcard-txt">
+            IF Tinggi = <strong>Tinggi</strong><br />AND Berat =
+            <strong>Normal</strong><br />THEN z = 90
+          </div>
+          <div class="rcard-alpha">
+            <span class="rcard-alpha-lbl">α =</span
+            ><span class="rcard-alpha-val">0.6500</span>
+          </div>
+        </div>
+      </div>
+      <div class="dbox">
+        <div class="dbox-lbl">
+          Cara hitung α — operator AND menggunakan fungsi MIN
+        </div>
+        <div class="codebl">
+          <span class="cm">// Aturan 8: IF Tinggi=Tinggi AND Berat=Normal</span
+          ><br />
+          µ(Tinggi = Tinggi) &nbsp;= <span class="cv">1.0000</span><br />
+          µ(Berat &nbsp;= Normal) &nbsp;= <span class="cv">0.6500</span><br />
+          <span class="cm">// Operator AND → ambil nilai terkecil (MIN)</span
+          ><br />
+          α₈ = MIN(1.0000, 0.6500) = <span class="ch">0.6500</span>
+        </div>
+        <div class="dbox-tip c3" style="margin-top: 16px">
+          💡 <strong>AND = MIN</strong> (sekuat mata rantai paling lemah).
+          <strong>OR = MAX</strong> (ambil yang terbesar). Aturan dengan α = 0
+          berarti tidak aktif sama sekali dan tidak mempengaruhi hasil.
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ═══════════════════════ STEP 4 ═══════════════════════ -->
+    <section class="wrap s4 reveal" id="step4">
+      <div class="sbadge">Langkah 4</div>
+      <h2 class="step-title">Defuzzifikasi —<br />Satu Angka Final</h2>
+      <p class="step-intro">
+        Kita sudah punya banyak aturan dengan kekuatan (α) berbeda-beda. Langkah
+        terakhir: gabungkan semuanya jadi
+        <strong>satu nilai akhir (z*)</strong> menggunakan
+        <em>Weighted Average</em> — rata-rata yang mempertimbangkan bobot tiap
+        aturan.
+      </p>
+      <div class="acard">
+        <div class="acard-ic">⚖️</div>
+        <div>
+          <h3>Ibarat: Nilai Ujian Berbobot</h3>
+          <p>
+            UAS bobotnya 60%, UTS 40%. Bukan rata-rata biasa — kamu
+            pertimbangkan bobotnya.<br /><br />
+            Di sini juga sama: aturan yang kuat (α besar)
+            <strong>lebih berpengaruh</strong> ke nilai akhir. Aturan lemah (α ≈
+            0) hampir tidak berpengaruh.
+          </p>
+        </div>
+      </div>
+      <div class="fbox">
+        <div class="fbox-lbl">Formula Weighted Average — Metode Sugeno</div>
+        <div class="fbox-expr">
+          z* = <span class="fbox-frac">Σ (αᵢ × zᵢ)</span> &nbsp;÷&nbsp; Σ αᵢ
+        </div>
+        <div class="fbox-sub">
+          z* =
+          <span style="color: rgba(255, 255, 255, 0.8)"
+            >(0.65 × 90) + (0.35 × 55)</span
+          ><br />
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;÷
+          <span style="color: rgba(255, 255, 255, 0.8)">(0.65 + 0.35)</span
+          ><br />
+          = <span style="color: #fff; font-weight: 600">58.50 + 19.25</span> ÷
+          <span style="color: #fff; font-weight: 600">1.00</span>
+        </div>
+        <div class="fbox-res">77.75</div>
+        <div class="fbox-badge" style="background: #3b82f6">→ Sangat Layak</div>
+      </div>
+      <h3
+        style="
+          font-family: &quot;Syne&quot;, sans-serif;
+          font-size: 18px;
+          font-weight: 800;
+          margin: 28px 0 14px;
+        "
+      >
+        Panduan Kategori Hasil Akhir
+      </h3>
+      <div class="kat-row">
+        <div class="kc kc1">
+          <h4>Tidak Layak</h4>
+          <div class="rng">z* &lt; 35</div>
+          <div class="dsc">
+            Belum memenuhi syarat. Perlu peningkatan signifikan di beberapa
+            kriteria.
+          </div>
+        </div>
+        <div class="kc kc2">
+          <h4>Cukup Layak</h4>
+          <div class="rng">35 ≤ z* &lt; 55</div>
+          <div class="dsc">
+            Memenuhi syarat minimal. Ada potensi tapi perlu dikembangkan lebih
+            lanjut.
+          </div>
+        </div>
+        <div class="kc kc3">
+          <h4>Layak</h4>
+          <div class="rng">55 ≤ z* &lt; 75</div>
+          <div class="dsc">
+            Memenuhi syarat dengan baik. Cocok untuk sebagian besar kegiatan.
+          </div>
+        </div>
+        <div class="kc kc4">
+          <h4>Sangat Layak</h4>
+          <div class="rng">z* ≥ 75</div>
+          <div class="dsc">
+            Memenuhi syarat secara unggul. Kandidat prioritas utama.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ═══════════════════════ INTERACTIVE ═══════════════════════ -->
+    <section class="wrap reveal">
+      <div class="slabel">Coba Langsung</div>
+      <h2
+        style="
+          font-family: &quot;Syne&quot;, sans-serif;
+          font-size: clamp(24px, 4vw, 38px);
+          font-weight: 800;
+          margin-bottom: 6px;
+        "
+      >
+        Mini Kalkulator Fuzzy
+      </h2>
+      <p style="color: var(--muted); font-size: 14.5px; margin-bottom: 0">
+        Geser slider dan lihat sistem menghitung secara real-time.
+      </p>
+
+      <div class="interactive">
+        <h3>Simulasi Langsung</h3>
+        <p class="isub">
+          Menggunakan 2 kriteria: Tinggi Badan &amp; Berat Badan dengan 9 aturan
+          fuzzy
+        </p>
+
+        <div class="sg">
+          <label class="sg-lbl"
+            >Tinggi Badan
+            <span class="tip" data-tip="Range: 100–200 cm">?</span></label
+          >
+          <input
+            type="range"
+            id="slT"
+            min="100"
+            max="200"
+            value="175"
+            oninput="runDemo()"
+          />
+          <div class="sg-val" id="lblT">175 cm</div>
+        </div>
+        <div class="sg">
+          <label class="sg-lbl"
+            >Berat Badan
+            <span class="tip" data-tip="Range: 0–100 kg">?</span></label
+          >
+          <input
+            type="range"
+            id="slB"
+            min="0"
+            max="100"
+            value="68"
+            oninput="runDemo()"
+          />
+          <div class="sg-val" id="lblB">68 kg</div>
+        </div>
+
+        <div class="live-grid">
+          <div class="live-panel">
+            <div class="live-panel-lbl">µ — Tinggi Badan</div>
+            <div id="livT" class="mu-bars"></div>
+          </div>
+          <div class="live-panel">
+            <div class="live-panel-lbl">µ — Berat Badan</div>
+            <div id="livB" class="mu-bars"></div>
+          </div>
+        </div>
+
+        <div class="res-box">
+          <div class="res-score" id="resScore" style="color: #1e40af">—</div>
+          <div class="res-info">
+            <div class="res-kat" id="resKat" style="color: #1e40af">
+              Geser slider di atas...
+            </div>
+            <div class="res-fml" id="resFml">Hasil z* akan muncul otomatis</div>
+            <div class="bar-track">
+              <div
+                class="bar-fill"
+                id="resBar"
+                style="width: 0%; background: #3b82f6"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════ SUMMARY ═══════════════════════ -->
+    <section class="summary">
+      <div class="summary-inner">
+        <div class="slabel" style="color: rgba(255, 255, 255, 0.3)">
+          Ringkasan
+        </div>
+        <h2
+          style="
+            font-family: &quot;Syne&quot;, sans-serif;
+            font-size: clamp(28px, 4vw, 48px);
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.1;
+            margin-bottom: 14px;
+          "
+        >
+          4 Langkah,<br />1 Keputusan.
+        </h2>
+        <p
+          style="
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.5);
+            max-width: 500px;
+            line-height: 1.85;
+          "
+        >
+          Dari data mentah jadi keputusan yang bijak dan konsisten — itulah
+          kekuatan Fuzzy Sugeno.
+        </p>
+        <div class="flow-grid">
+          <div class="fc">
+            <div class="fc-num">01 · INPUT</div>
+            <div class="fc-name">Nilai Input</div>
+            <div class="fc-desc">
+              Data mentah siswa dimasukkan per kriteria. Ini titik awal
+              segalanya.
+            </div>
+          </div>
+          <div class="fc">
+            <div class="fc-num">02 · FUZZIFIKASI</div>
+            <div class="fc-name">Derajat Keanggotaan µ</div>
+            <div class="fc-desc">
+              Angka diubah jadi nilai µ antara 0–1 menggunakan fungsi trimf atau
+              trapmf.
+            </div>
+          </div>
+          <div class="fc">
+            <div class="fc-num">03 · INFERENSI</div>
+            <div class="fc-name">Firing Strength α</div>
+            <div class="fc-desc">
+              Setiap aturan IF-THEN dievaluasi. α dihitung dengan MIN (AND) atau
+              MAX (OR).
+            </div>
+          </div>
+          <div class="fc">
+            <div class="fc-num">04 · DEFUZZIFIKASI</div>
+            <div class="fc-name">Nilai Akhir z*</div>
+            <div class="fc-desc">
+              Weighted Average: semua aturan aktif digabung jadi satu nilai
+              crisp final.
+            </div>
+          </div>
+        </div>
+        <a href="javascript:history.back()" class="back-btn">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="2.5"
+            stroke="currentColor"
+            style="width: 16px; height: 16px"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15.75 19.5 8.25 12l7.5-7.5"
+            />
+          </svg>
+          Kembali ke Sistem
+        </a>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════ SCRIPT ═══════════════════════ -->
+    <script>
+      /* ── Fungsi keanggotaan ─────────────────────────────── */
+      function trimf(a, b, c, x) {
+        if (x <= a || x >= c) return 0;
+        if (x <= b) return b - a === 0 ? 1 : (x - a) / (b - a);
+        return c - b === 0 ? 1 : (c - x) / (c - b);
+      }
+      function trapmf(a, b, c, d, x) {
+        if (x <= a || x >= d) return 0;
+        if (x >= b && x <= c) return 1;
+        if (x < b) return b - a === 0 ? 1 : (x - a) / (b - a);
+        return d - c === 0 ? 1 : (d - x) / (d - c);
+      }
+
+      /* ── Definisi himpunan ──────────────────────────────── */
+      var HT = [
+        {
+          nama: "Rendah",
+          fn: function (x) {
+            return trapmf(100, 100, 150, 160, x);
+          },
+          color: "#ef4444",
+        },
+        {
+          nama: "Sedang",
+          fn: function (x) {
+            return trimf(150, 165, 175, x);
+          },
+          color: "#f59e0b",
+        },
+        {
+          nama: "Tinggi",
+          fn: function (x) {
+            return trapmf(170, 180, 200, 200, x);
+          },
+          color: "#10b981",
+        },
+      ];
+      var HB = [
+        {
+          nama: "Kurus",
+          fn: function (x) {
+            return trapmf(0, 0, 45, 55, x);
+          },
+          color: "#ef4444",
+        },
+        {
+          nama: "Normal",
+          fn: function (x) {
+            return trapmf(50, 55, 70, 75, x);
+          },
+          color: "#10b981",
+        },
+        {
+          nama: "Gemuk",
+          fn: function (x) {
+            return trapmf(70, 80, 100, 100, x);
+          },
+          color: "#f59e0b",
+        },
+      ];
+
+      /* ── 9 aturan fuzzy ─────────────────────────────────── */
+      var RULES = [
+        { t: "Rendah", b: "Kurus", z: 20 },
+        { t: "Rendah", b: "Normal", z: 40 },
+        { t: "Rendah", b: "Gemuk", z: 25 },
+        { t: "Sedang", b: "Kurus", z: 50 },
+        { t: "Sedang", b: "Normal", z: 75 },
+        { t: "Sedang", b: "Gemuk", z: 45 },
+        { t: "Tinggi", b: "Kurus", z: 60 },
+        { t: "Tinggi", b: "Normal", z: 90 },
+        { t: "Tinggi", b: "Gemuk", z: 55 },
+      ];
+
+      /* ── Warna per kategori ─────────────────────────────── */
+      var KCOLOR = {
+        "Tidak Layak": { text: "#991b1b", bar: "#ef4444" },
+        "Cukup Layak": { text: "#92400e", bar: "#f59e0b" },
+        Layak: { text: "#166534", bar: "#10b981" },
+        "Sangat Layak": { text: "#1e40af", bar: "#3b82f6" },
+      };
+
+      /* ── Render bar µ di panel live ─────────────────────── */
+      function renderMuPanel(id, himpunan, x) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var out = "";
+        for (var i = 0; i < himpunan.length; i++) {
+          var h = himpunan[i];
+          var mu = h.fn(x);
+          out +=
+            '<div class="mu-row">' +
+            '<div class="mu-label">' +
+            h.nama +
+            "</div>" +
+            '<div class="mu-track"><div class="mu-fill" style="width:' +
+            (mu * 100).toFixed(1) +
+            "%;background:" +
+            h.color +
+            ';transition:width .3s;"></div></div>' +
+            '<div class="mu-val" style="color:' +
+            h.color +
+            ';">' +
+            mu.toFixed(4) +
+            "</div>" +
+            "</div>";
+        }
+        el.innerHTML = out;
+      }
+
+      /* ── Slider gradient helper ─────────────────────────── */
+      function setSliderGradient(el, pct) {
+        el.style.background =
+          "linear-gradient(90deg,#e84b2a 0%,#e84b2a " +
+          pct +
+          "%,#d4d0c8 " +
+          pct +
+          "%,#d4d0c8 100%)";
+      }
+
+      /* ── Hitung & render demo ───────────────────────────── */
+      function runDemo() {
+        var slT = document.getElementById("slT");
+        var slB = document.getElementById("slB");
+        var tinggi = parseInt(slT.value, 10);
+        var berat = parseInt(slB.value, 10);
+
+        document.getElementById("lblT").textContent = tinggi + " cm";
+        document.getElementById("lblB").textContent = berat + " kg";
+
+        setSliderGradient(slT, Math.round(((tinggi - 100) / 100) * 100));
+        setSliderGradient(slB, Math.round((berat / 100) * 100));
+
+        /* Fuzzifikasi */
+        var muT = {},
+          muB = {};
+        for (var i = 0; i < HT.length; i++) muT[HT[i].nama] = HT[i].fn(tinggi);
+        for (var j = 0; j < HB.length; j++) muB[HB[j].nama] = HB[j].fn(berat);
+
+        renderMuPanel("livT", HT, tinggi);
+        renderMuPanel("livB", HB, berat);
+
+        /* Inferensi + defuzzifikasi */
+        var sumAZ = 0,
+          sumA = 0;
+        for (var k = 0; k < RULES.length; k++) {
+          var r = RULES[k];
+          var alpha = Math.min(muT[r.t] || 0, muB[r.b] || 0);
+          sumAZ += alpha * r.z;
+          sumA += alpha;
+        }
+
+        var elScore = document.getElementById("resScore");
+        var elKat = document.getElementById("resKat");
+        var elFml = document.getElementById("resFml");
+        var elBar = document.getElementById("resBar");
+
+        if (sumA < 0.0001) {
+          elScore.textContent = "—";
+          elScore.style.color = "#9ca3af";
+          elKat.textContent = "Tidak dapat dihitung";
+          elKat.style.color = "#9ca3af";
+          elFml.textContent = "Semua aturan memiliki alpha = 0";
+          elBar.style.width = "0%";
+          elBar.style.background = "#d1d5db";
+          return;
+        }
+
+        var z = sumAZ / sumA;
+        var zFmt = z.toFixed(2);
+        var lbl =
+          z >= 75
+            ? "Sangat Layak"
+            : z >= 55
+              ? "Layak"
+              : z >= 35
+                ? "Cukup Layak"
+                : "Tidak Layak";
+        var c = KCOLOR[lbl];
+
+        elScore.textContent = zFmt;
+        elScore.style.color = c.text;
+        elKat.textContent = lbl;
+        elKat.style.color = c.text;
+        elFml.textContent =
+          "z* = " +
+          sumAZ.toFixed(4) +
+          " \u00F7 " +
+          sumA.toFixed(4) +
+          " = " +
+          zFmt;
+        elBar.style.width = Math.min(100, z).toFixed(1) + "%";
+        elBar.style.background = c.bar;
+      }
+
+      /* ── Animasi bar statis Step 2 (nilai contoh 175 cm, 68 kg) ── */
+      var STATIC_VALS = [
+        /* Tinggi */ { id: "s2r1", vid: "s2v1", mu: 0 },
+        { id: "s2r2", vid: "s2v2", mu: 0 },
+        { id: "s2r3", vid: "s2v3", mu: 1.0 },
+        /* Berat  */ { id: "s2r4", vid: "s2v4", mu: 0 },
+        { id: "s2r5", vid: "s2v5", mu: 0.65 },
+        { id: "s2r6", vid: "s2v6", mu: 0.35 },
+      ];
+
+      function animateStaticBars() {
+        for (var i = 0; i < STATIC_VALS.length; i++) {
+          (function (item, delay) {
+            setTimeout(function () {
+              var bar = document.getElementById(item.id);
+              var val = document.getElementById(item.vid);
+              if (bar) bar.style.width = (item.mu * 100).toFixed(1) + "%";
+              if (val) val.textContent = item.mu.toFixed(4);
+            }, delay);
+          })(STATIC_VALS[i], i * 100);
+        }
+      }
+
+      /* ── Intersection Observer ──────────────────────────── */
+      var step2Animated = false;
+
+      var observer = new IntersectionObserver(
+        function (entries) {
+          for (var e = 0; e < entries.length; e++) {
+            var entry = entries[e];
+            if (!entry.isIntersecting) continue;
+
+            /* Tampilkan elemen reveal */
+            if (entry.target.classList.contains("reveal")) {
+              entry.target.classList.add("on");
+            }
+
+            /* Animasi bar Step 2 saat section masuk viewport */
+            if (!step2Animated && entry.target.id === "step2") {
+              step2Animated = true;
+              setTimeout(animateStaticBars, 300);
+            }
+          }
+        },
+        { threshold: 0.06 },
+      );
+
+      /* Observe semua .reveal */
+      var revEls = document.querySelectorAll(".reveal");
+      for (var r = 0; r < revEls.length; r++) {
+        observer.observe(revEls[r]);
+      }
+      /* Observe section#step2 secara eksplisit */
+      var s2Section = document.getElementById("step2");
+      if (s2Section) observer.observe(s2Section);
+
+      /* ── Init ───────────────────────────────────────────── */
+      runDemo();
+    </script>
+  </body>
+</html>
